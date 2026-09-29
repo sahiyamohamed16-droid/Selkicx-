@@ -1,6 +1,9 @@
 package com.selkicx.manualbooth.ui.activesession
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -24,6 +27,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.selkicx.manualbooth.data.local.entity.SessionPhotoEntity
@@ -73,10 +79,38 @@ fun ActiveSessionScreen(
     val state by viewModel.uiState.collectAsState()
     val qrEnabled by appContainer.appSettingsRepository.qrSharingEnabled.collectAsState()
     var showQrDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val imageReadPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    var hasImageReadPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, imageReadPermission) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val imagePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasImageReadPermission = granted
+        if (granted) viewModel.startHotFolderImport()
+    }
     val photoImporter = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
         viewModel.importPhotos(uris.map(Uri::toString))
+    }
+
+    LaunchedEffect(state.canAutoImportPhotos) {
+        if (state.canAutoImportPhotos) {
+            if (hasImageReadPermission) {
+                viewModel.startHotFolderImport()
+            } else {
+                imagePermissionLauncher.launch(imageReadPermission)
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -96,6 +130,32 @@ fun ActiveSessionScreen(
 
             Spacer(Modifier.height(8.dp))
             Text("Select ${state.requiredPhotoCount} Photos", style = MaterialTheme.typography.titleMedium)
+
+            if (state.canAutoImportPhotos) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (hasImageReadPermission) {
+                        "AUTO IMPORT ON • Send a Canon photo to this device"
+                    } else {
+                        "Allow full photo access to receive Canon transfers automatically"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (hasImageReadPermission) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    }
+                )
+                if (!hasImageReadPermission) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { imagePermissionLauncher.launch(imageReadPermission) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("ALLOW PHOTO ACCESS")
+                    }
+                }
+            }
 
             if (state.canImportPhotos) {
                 Spacer(Modifier.height(8.dp))

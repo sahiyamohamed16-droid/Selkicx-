@@ -4,6 +4,11 @@
     <!-- For the real SelkicX cloud API (Milestone 8's sync worker) and WorkManager's network constraint. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Required to watch for images saved by Canon Camera Connect/NFC. -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:allowBackup="true"

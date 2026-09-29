@@ -7,7 +7,7 @@ Every milestone from the original implementation plan is now built:
   CameraAdapter / PrinterAdapter interfaces (mock camera + initial
   Android Print Framework printer).
 - **Milestone 2** — the Home → New Session → Active Session UI flow,
-  wired end-to-end against `ManualImportCameraAdapter` and `AndroidPrintAdapter`,
+  wired end-to-end against `AndroidHotFolderCameraAdapter` and `AndroidPrintAdapter`,
   including the required PRINT confirmation popup and Next Customer
   session-cycling.
 - **Milestone 4** — the real rendering pipeline: crop → mask (rectangle /
@@ -76,7 +76,9 @@ app/src/main/java/com/selkicx/manualbooth/
 ├── camera/
 │   ├── MockCameraAdapter.kt         Emits sample photos on demand — build/test
 │   │                                the whole app against this first
-│   └── ManualImportCameraAdapter.kt SAF-based fallback import path
+│   ├── AndroidHotFolderCameraAdapter.kt  Watches Canon Camera Connect/NFC
+│   │                                     images published to Android MediaStore
+│   └── ManualImportCameraAdapter.kt      SAF-based fallback import path
 └── printer/
     ├── AndroidPrintAdapter.kt       Initial PrinterAdapter using the OS Print
     │                                Framework
@@ -259,16 +261,22 @@ a complete, ready-to-open Gradle project — see "Build & run" below.
 
 The remaining Admin sections are Print Sizes CRUD (A4, 4x6, and Photocard
 are seeded automatically on a fresh database), Camera, Printer, SelkicX
-Account, Storage, and About. Real tethered camera SDKs, printer profiles,
-and the SelkicX backend are also not wired yet.
+Account, Storage, and About. Printer profiles and the SelkicX backend are
+also not wired yet.
 
-## Trying Milestone 2 without a real camera or printer
+## Canon Camera Connect / NFC hot-folder workflow
 
-`AppContainer.cameraAdapter` uses `ManualImportCameraAdapter` by default.
-On the Active Session screen, tap **IMPORT PHOTOS** and select one or more
-JPEG/PNG images from Android Files, a gallery provider, SD card, or mounted
-USB storage. The adapter copies each selected image into
-`files/sessions/<sessionId>/originals` before adding it to the gallery.
+`AppContainer.cameraAdapter` uses `AndroidHotFolderCameraAdapter`. During an
+active session, grant full photo access and transfer a JPEG/PNG from the
+Canon EOS 1300D using Canon Camera Connect or its NFC image-send flow. The
+adapter watches Android MediaStore for Canon-owned folders/packages and
+standard Canon `IMG_` / `_MG_` filenames, then copies each new image into
+`files/sessions/<sessionId>/originals` before adding it to the live gallery.
+
+The camera remains independently operated; SelkicX does not use EDSDK or
+control the shutter. The EOS 1300D requires the operator to select/send the
+captured image—its firmware does not push every shot automatically. The
+**IMPORT PHOTOS** SAF picker remains available as a fallback.
 
 `AndroidPrintAdapter` uses the real OS print dialog, so printing on an
    emulator will show Android's "Save as PDF" virtual printer, which is
@@ -295,21 +303,17 @@ This is a complete, standard Gradle project — no file-merging required.
    Maven Central's repositories — needs internet the first time).
 3. Run on an emulator or a device with **API 26+**. Use the ▶ Run button
    with the `app` configuration Android Studio creates automatically.
-4. The app opens on Home with **Camera: Connected** and
-   **Printer: Connected** (the OS Print Framework is always "available").
+4. The app opens on Home. Camera status becomes connected after Android
+   grants photo-library access and the hot-folder observer starts. Printer
+   status uses the OS Print Framework.
    Go **Home → Admin → Templates → New Folder → Add Template** (pick the
    size, choose any JPG/PNG from the emulator's sample gallery) → add a
    couple of photo holders → **Save Template** → back at Home →
    **+ NEW SESSION** → walk through size/folder/template/photo mode →
    **START SESSION**.
-5. On the Active Session screen, tap **IMPORT PHOTOS**, choose enough
-   JPEG/PNG images, select them in holder order, and tap **PRINT**.
+5. On the Active Session screen, allow full photo access and send photos
+   with Camera Connect/NFC. They should appear automatically. Select them
+   in holder order and tap **PRINT**. Use **IMPORT PHOTOS** as a fallback.
 
-I can't compile or run this myself — the environment I write code in has
-no Android SDK, emulator, or Gradle installed, so I can't hand you a
-built APK or a live app to tap through. Everything above is verified at
-the source level (every file balances its braces/parens, every call site
-matches the functions it calls, every import resolves to a real symbol
-in this codebase or a declared dependency) but not by an actual Kotlin
-compiler or the Android toolchain, since neither is available to me here.
-The most reliable next check is opening it in Android Studio as above.
+GitHub Actions compiles the project with JDK 17 and Gradle 8.6 and publishes
+the debug APK as `selkicx-manual-booth-debug-apk`.

@@ -30,6 +30,7 @@ data class ActiveSessionUiState(
     val selectedPhotoIds: List<Long> = emptyList(),
     val requiredPhotoCount: Int = 0,
     val canImportPhotos: Boolean = false,
+    val canAutoImportPhotos: Boolean = false,
     val printPhase: PrintPhase = PrintPhase.IDLE,
     val errorMessage: String? = null
 ) {
@@ -70,6 +71,7 @@ class ActiveSessionViewModel(
             selectedPhotoIds = selected,
             requiredPhotoCount = required,
             canImportPhotos = cameraAdapter.supportsManualImport,
+            canAutoImportPhotos = cameraAdapter.supportsHotFolderImport,
             printPhase = phase
         )
     }
@@ -125,6 +127,12 @@ class ActiveSessionViewModel(
                 errorMessage.value = e.message ?: "Unable to import selected photos"
             }
         }
+    }
+
+    /** Rechecks permission and starts MediaStore monitoring for this session. */
+    fun startHotFolderImport() {
+        if (!cameraAdapter.supportsHotFolderImport) return
+        viewModelScope.launch { cameraAdapter.beginSession(sessionId) }
     }
 
     /**

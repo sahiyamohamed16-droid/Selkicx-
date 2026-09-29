@@ -101,6 +101,10 @@ class SessionRepository(
             }
             .launchIn(repositoryScope)
 
+        // Start watching Android's image library only after the collector is
+        // attached, so a fast Camera Connect/NFC delivery cannot be dropped.
+        cameraAdapter.beginSession(sessionId)
+
         return sessionId
     }
 

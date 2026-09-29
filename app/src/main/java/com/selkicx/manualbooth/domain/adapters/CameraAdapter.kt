@@ -34,11 +34,20 @@ interface CameraAdapter {
     /** True when this adapter can accept operator-selected image files. */
     val supportsManualImport: Boolean get() = false
 
+    /** True when Android media storage can be watched for camera transfers. */
+    val supportsHotFolderImport: Boolean get() = false
+
     /** Emits each new photo as it's detected, thumbnail-first. */
     fun observeIncomingPhotos(): Flow<CapturedPhoto>
 
     suspend fun connect()
     suspend fun disconnect()
+
+    /**
+     * Points an automatic receiver at the current session. Camera adapters
+     * that do not watch an Android hot folder can keep the no-op default.
+     */
+    suspend fun beginSession(sessionId: Long) = Unit
 
     /**
      * Imports operator-selected images into [sessionId]. Hardware camera

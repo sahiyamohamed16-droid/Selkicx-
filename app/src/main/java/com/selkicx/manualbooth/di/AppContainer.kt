@@ -1,7 +1,7 @@
 package com.selkicx.manualbooth.di
 
 import android.content.Context
-import com.selkicx.manualbooth.camera.ManualImportCameraAdapter
+import com.selkicx.manualbooth.camera.AndroidHotFolderCameraAdapter
 import com.selkicx.manualbooth.cloud.CloudSyncScheduler
 import com.selkicx.manualbooth.data.local.AppDatabase
 import com.selkicx.manualbooth.data.repository.AppSettingsRepository
@@ -32,10 +32,11 @@ class AppContainer(context: Context) {
     val database: AppDatabase = AppDatabase.getInstance(appContext)
 
     /**
-     * Swap this for a real CanonCameraAdapter/NikonCameraAdapter/etc. later;
-     * nothing outside this container needs to change (spec section 15).
+     * Watches Android MediaStore for JPEG/PNG files delivered by Canon
+     * Camera Connect/NFC, while retaining manual SAF import as a fallback.
+     * The camera itself remains untethered and independently operated.
      */
-    val cameraAdapter: CameraAdapter = ManualImportCameraAdapter(appContext)
+    val cameraAdapter: CameraAdapter = AndroidHotFolderCameraAdapter(appContext)
 
     val printerAdapter: PrinterAdapter = AndroidPrintAdapter(appContext)
 
